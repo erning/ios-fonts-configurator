@@ -9,6 +9,7 @@ pub struct FontPayload {
     pub name: String,
     pub data: Vec<u8>,
     pub uuid: String,
+    pub identifier: String,
 }
 
 #[derive(Debug)]
@@ -16,7 +17,7 @@ pub struct MobileConfig {
     pub payload_identifier: String,
     pub payload_display_name: String,
     pub payload_uuid: String,
-    pub payload_version: i32,
+    pub consent_text: String,
     pub fonts: Vec<FontPayload>,
 }
 
@@ -26,7 +27,7 @@ impl MobileConfig {
             payload_identifier: identifier,
             payload_display_name: display_name,
             payload_uuid: Uuid::new_v4().to_string(),
-            payload_version: 1,
+            consent_text: "This profile will install custom fonts on your iOS device.".to_string(),
             fonts: Vec::new(),
         }
     }
@@ -43,10 +44,14 @@ impl MobileConfig {
         let data = fs::read(font_path)
             .map_err(|e| anyhow!("Failed to read font file {}: {}", font_path.display(), e))?;
 
+        let font_uuid = Uuid::new_v4().to_string();
+        let font_identifier = format!("{}.{}.fontpayload", self.payload_identifier, font_uuid);
+
         let font_payload = FontPayload {
             name,
             data,
-            uuid: Uuid::new_v4().to_string(),
+            uuid: font_uuid,
+            identifier: font_identifier,
         };
 
         self.fonts.push(font_payload);
@@ -56,20 +61,30 @@ impl MobileConfig {
     pub fn generate_xml(&self) -> String {
         let mut xml = String::new();
 
-        xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        xml.push_str("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n");
+        xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
+        xml.push_str("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\"\n");
+        xml.push_str("    \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n");
         xml.push_str("<plist version=\"1.0\">\n");
         xml.push_str("<dict>\n");
+
+        // ConsentText
+        xml.push_str("  <key>ConsentText</key>\n");
+        xml.push_str("  <dict>\n");
+        xml.push_str("    <key>default</key>\n");
+        xml.push_str(&format!("    <string>{}</string>\n", self.consent_text));
+        xml.push_str("  </dict>\n");
+
+        // PayloadContent
         xml.push_str("  <key>PayloadContent</key>\n");
         xml.push_str("  <array>\n");
 
         for font in &self.fonts {
             let base64_data = general_purpose::STANDARD.encode(&font.data);
-            xml.push_str("    <dict>\n");
-            xml.push_str("      <key>PayloadContent</key>\n");
-            xml.push_str("      <data>");
+            xml.push_str("      <dict>\n");
+            xml.push_str("        <key>Font</key>\n");
+            xml.push_str("        <data>");
 
-            // Format base64 data as multi-line with 64 characters per line
+            // Format base64 data as multi-line with proper indentation
             for (i, chunk) in base64_data.as_bytes().chunks(64).enumerate() {
                 if i > 0 {
                     xml.push_str("\n        ");
@@ -78,43 +93,63 @@ impl MobileConfig {
             }
 
             xml.push_str("</data>\n");
-            xml.push_str("      <key>PayloadIdentifier</key>\n");
-            xml.push_str(&format!(
-                "      <string>{}.{}.fontpayload</string>\n",
-                self.payload_identifier, font.uuid
-            ));
-            xml.push_str("      <key>PayloadType</key>\n");
-            xml.push_str("      <string>com.apple.font</string>\n");
-            xml.push_str("      <key>PayloadUUID</key>\n");
-            xml.push_str(&format!("      <string>{}</string>\n", font.uuid));
-            xml.push_str("      <key>PayloadVersion</key>\n");
-            xml.push_str("      <integer>1</integer>\n");
-            xml.push_str("      <key>Name</key>\n");
-            xml.push_str(&format!("      <string>{}</string>\n", font.name));
-            xml.push_str("    </dict>\n");
+            xml.push_str("        <key>Name</key>\n");
+            xml.push_str(&format!("        <string>{}</string>\n", font.name));
+            xml.push_str("        <key>PayloadDescription</key>\n");
+            xml.push_str("        <string>Configures Font settings</string>\n");
+            xml.push_str("        <key>PayloadDisplayName</key>\n");
+            xml.push_str("        <string>Fonts</string>\n");
+            xml.push_str("        <key>PayloadIdentifier</key>\n");
+            xml.push_str(&format!("        <string>{}</string>\n", font.identifier));
+            xml.push_str("        <key>PayloadType</key>\n");
+            xml.push_str("        <string>com.apple.font</string>\n");
+            xml.push_str("        <key>PayloadUUID</key>\n");
+            xml.push_str(&format!("        <string>{}</string>\n", font.uuid));
+            xml.push_str("        <key>PayloadVersion</key>\n");
+            xml.push_str("        <integer>1</integer>\n");
+            xml.push_str("      </dict>\n");
         }
 
         xml.push_str("  </array>\n");
+
+        // PayloadDisplayName
         xml.push_str("  <key>PayloadDisplayName</key>\n");
         xml.push_str(&format!(
             "  <string>{}</string>\n",
             self.payload_display_name
         ));
+
+        // PayloadIdentifier
         xml.push_str("  <key>PayloadIdentifier</key>\n");
         xml.push_str(&format!("  <string>{}</string>\n", self.payload_identifier));
+
+        // PayloadRemovalDisallowed
+        xml.push_str("  <key>PayloadRemovalDisallowed</key>\n");
+        xml.push_str("  <false />\n");
+
+        // PayloadType
         xml.push_str("  <key>PayloadType</key>\n");
         xml.push_str("  <string>Configuration</string>\n");
+
+        // PayloadUUID
         xml.push_str("  <key>PayloadUUID</key>\n");
         xml.push_str(&format!("  <string>{}</string>\n", self.payload_uuid));
+
+        // PayloadVersion
         xml.push_str("  <key>PayloadVersion</key>\n");
-        xml.push_str(&format!("  <integer>{}</integer>\n", self.payload_version));
+        xml.push_str("  <integer>1</integer>\n");
+
         xml.push_str("</dict>\n");
-        xml.push_str("</plist>");
+        xml.push_str("</plist>\n");
 
         xml
     }
 
     pub fn save_to_file(&self, output_path: &Path) -> Result<()> {
+        if self.fonts.is_empty() {
+            return Err(anyhow!("No font data has been added to the configuration"));
+        }
+
         let xml = self.generate_xml();
         fs::write(output_path, xml)
             .map_err(|e| anyhow!("Failed to write mobileconfig file: {}", e))?;
