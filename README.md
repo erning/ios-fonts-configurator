@@ -83,7 +83,7 @@ ios-fonts-configurator \
 1. Transfer the generated `.mobileconfig` file to your iOS device
 2. Open the file in Safari or Mail
 3. Follow the on-screen prompts to install the configuration profile
-4. Go to **Settings � General � VPN & Device Management**
+4. Go to **Settings** -> **General** -> **VPN & Device Management**
 5. Find the profile and install it
 6. The fonts will be available system-wide
 

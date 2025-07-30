@@ -79,3 +79,11 @@ ios-fonts-configurator \
 - Batch processing capabilities
 - Configuration file support for repeated use
 - Validation of font file formats before processing
+
+## Git Commit Guidelines
+
+When creating git commits, always include the following co-authorship in the commit message:
+
+```
+Co-Authored-By: GLM-4.5 <noreply@z.ai>
+```
