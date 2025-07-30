@@ -60,40 +60,54 @@ impl MobileConfig {
         xml.push_str("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n");
         xml.push_str("<plist version=\"1.0\">\n");
         xml.push_str("<dict>\n");
-        xml.push_str("    <key>PayloadContent</key>\n");
-        xml.push_str("    <array>\n");
+        xml.push_str("  <key>PayloadContent</key>\n");
+        xml.push_str("  <array>\n");
 
         for font in &self.fonts {
             let base64_data = general_purpose::STANDARD.encode(&font.data);
-            xml.push_str("        <dict>\n");
-            xml.push_str("            <key>PayloadContent</key>\n");
-            xml.push_str("            <data>");
-            xml.push_str(&base64_data);
+            xml.push_str("    <dict>\n");
+            xml.push_str("      <key>PayloadContent</key>\n");
+            xml.push_str("      <data>");
+
+            // Format base64 data as multi-line with 64 characters per line
+            for (i, chunk) in base64_data.as_bytes().chunks(64).enumerate() {
+                if i > 0 {
+                    xml.push_str("\n        ");
+                }
+                xml.push_str(std::str::from_utf8(chunk).unwrap());
+            }
+
             xml.push_str("</data>\n");
-            xml.push_str("            <key>PayloadIdentifier</key>\n");
-            xml.push_str(&format!("            <string>{}.{}.fontpayload</string>\n", self.payload_identifier, font.uuid));
-            xml.push_str("            <key>PayloadType</key>\n");
-            xml.push_str("            <string>com.apple.font</string>\n");
-            xml.push_str("            <key>PayloadUUID</key>\n");
-            xml.push_str(&format!("            <string>{}</string>\n", font.uuid));
-            xml.push_str("            <key>PayloadVersion</key>\n");
-            xml.push_str("            <integer>1</integer>\n");
-            xml.push_str("            <key>Name</key>\n");
-            xml.push_str(&format!("            <string>{}</string>\n", font.name));
-            xml.push_str("        </dict>\n");
+            xml.push_str("      <key>PayloadIdentifier</key>\n");
+            xml.push_str(&format!(
+                "      <string>{}.{}.fontpayload</string>\n",
+                self.payload_identifier, font.uuid
+            ));
+            xml.push_str("      <key>PayloadType</key>\n");
+            xml.push_str("      <string>com.apple.font</string>\n");
+            xml.push_str("      <key>PayloadUUID</key>\n");
+            xml.push_str(&format!("      <string>{}</string>\n", font.uuid));
+            xml.push_str("      <key>PayloadVersion</key>\n");
+            xml.push_str("      <integer>1</integer>\n");
+            xml.push_str("      <key>Name</key>\n");
+            xml.push_str(&format!("      <string>{}</string>\n", font.name));
+            xml.push_str("    </dict>\n");
         }
 
-        xml.push_str("    </array>\n");
-        xml.push_str("    <key>PayloadDisplayName</key>\n");
-        xml.push_str(&format!("    <string>{}</string>\n", self.payload_display_name));
-        xml.push_str("    <key>PayloadIdentifier</key>\n");
-        xml.push_str(&format!("    <string>{}</string>\n", self.payload_identifier));
-        xml.push_str("    <key>PayloadType</key>\n");
-        xml.push_str("    <string>Configuration</string>\n");
-        xml.push_str("    <key>PayloadUUID</key>\n");
-        xml.push_str(&format!("    <string>{}</string>\n", self.payload_uuid));
-        xml.push_str("    <key>PayloadVersion</key>\n");
-        xml.push_str(&format!("    <integer>{}</integer>\n", self.payload_version));
+        xml.push_str("  </array>\n");
+        xml.push_str("  <key>PayloadDisplayName</key>\n");
+        xml.push_str(&format!(
+            "  <string>{}</string>\n",
+            self.payload_display_name
+        ));
+        xml.push_str("  <key>PayloadIdentifier</key>\n");
+        xml.push_str(&format!("  <string>{}</string>\n", self.payload_identifier));
+        xml.push_str("  <key>PayloadType</key>\n");
+        xml.push_str("  <string>Configuration</string>\n");
+        xml.push_str("  <key>PayloadUUID</key>\n");
+        xml.push_str(&format!("  <string>{}</string>\n", self.payload_uuid));
+        xml.push_str("  <key>PayloadVersion</key>\n");
+        xml.push_str(&format!("  <integer>{}</integer>\n", self.payload_version));
         xml.push_str("</dict>\n");
         xml.push_str("</plist>");
 
