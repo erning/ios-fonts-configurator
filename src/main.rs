@@ -119,9 +119,9 @@ fn main() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("Invalid max-depth value: {}", e))?;
 
     println!("Creating mobileconfig file: {}", output_path.display());
-    println!("Profile name: {}", display_name);
-    println!("Identifier: {}", identifier);
-    println!("Input paths: {:?}", font_paths);
+    println!("Profile name: {display_name}");
+    println!("Identifier: {identifier}");
+    println!("Input paths: {font_paths:?}");
 
     let font_files = collect_font_files(&font_paths, max_depth)?;
     // println!("Found font files: {:?}", font_files);
