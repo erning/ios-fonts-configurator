@@ -87,6 +87,18 @@ ios-fonts-configurator \
 5. Find the profile and install it
 6. The fonts will be available system-wide
 
+## Example
+
+```sh
+nix develop --command fish
+cargo run -- \
+    -o LibertinusFonts.mobileconfig \
+    -n "Fonts - Libertinus" \
+    -i "com.erning.fonts.Libertinus" \
+    -f ~/Library/Fonts/HomeManager/opentype/Libertinus*
+```
+Airdrop `LibertinusFonts.mobileconfig` to your iOS device and install it.
+
 ## Development
 
 ### Build
