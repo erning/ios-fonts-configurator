@@ -1,8 +1,30 @@
 use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose, Engine as _};
+use std::collections::hash_map::DefaultHasher;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::path::Path;
-use uuid::Uuid;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+fn generate_uuid() -> String {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+
+    let mut hasher = DefaultHasher::new();
+    timestamp.hash(&mut hasher);
+    let hash = hasher.finish();
+
+    format!(
+        "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
+        (hash >> 32) as u32,
+        (hash >> 16) as u16,
+        (hash >> 8) as u16,
+        (hash & 0xFF) as u16,
+        hash
+    )
+}
 
 #[derive(Debug)]
 pub struct FontPayload {
@@ -26,7 +48,7 @@ impl MobileConfig {
         Self {
             payload_identifier: identifier,
             payload_display_name: display_name,
-            payload_uuid: Uuid::new_v4().to_string(),
+            payload_uuid: generate_uuid(),
             consent_text: "This profile will install custom fonts on your iOS device.".to_string(),
             fonts: Vec::new(),
         }
@@ -44,7 +66,7 @@ impl MobileConfig {
         let data = fs::read(font_path)
             .map_err(|e| anyhow!("Failed to read font file {}: {}", font_path.display(), e))?;
 
-        let font_uuid = Uuid::new_v4().to_string();
+        let font_uuid = generate_uuid();
         let font_identifier = format!("{}.{}.fontpayload", self.payload_identifier, font_uuid);
 
         let font_payload = FontPayload {

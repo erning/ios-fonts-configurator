@@ -30,18 +30,13 @@ This is Apple's officially recommended and most intuitive method. You only need 
 #### Step 2: Create Font Configuration Profile
 
 1.  Open Apple Configurator.
-
 2.  In the menu bar, select **"File" > "New Profile"**.
-
 3.  **Configure "General" Payload**:
-
     *   This is a required section for every configuration profile.
     *   **Name**: Give the profile an easily recognizable name, such as "My Custom Font Pack". This name will be displayed in the iPhone's settings.
     *   **Identifier**: Enter a unique identifier, typically using reverse domain name format, such as `com.yourname.fonts.custom`. This is used by the system to distinguish between different profiles.
     *   Other fields can be filled out as needed. For personal use, the above two items are essential.
-
 4.  **Add "Fonts" Payload**:
-
     *   In the payload list on the left, scroll down and click **"Fonts"**.
     *   Click the **"Configure"** button on the right.
     *   You can directly drag and drop your `.ttf` or `.otf` font files into the font area, or click "Add Font" to select files. You can add multiple fonts at once.
@@ -93,20 +88,26 @@ Here's a basic template:
             <key>PayloadContent</key>
             <data>BASE64_ENCODED_FONT_DATA_HERE</data>
             <key>PayloadIdentifier</key>
-            <string>com.yourname.fonts.custom.fontpayload</string> <key>PayloadType</key>
+            <string>com.yourname.fonts.custom.fontpayload</string>
+            <key>PayloadType</key>
             <string>com.apple.font</string>
             <key>PayloadUUID</key>
-            <string>UNIQUE_UUID_1</string> <key>PayloadVersion</key>
+            <string>UNIQUE_UUID_1</string>
+            <key>PayloadVersion</key>
             <integer>1</integer>
             <key>Name</key>
-            <string>Your Font Name.ttf</string> </dict>
-        </array>
+            <string>Your Font Name.ttf</string>
+        </dict>
+    </array>
     <key>PayloadDisplayName</key>
-    <string>My Custom Font Pack</string> <key>PayloadIdentifier</key>
-    <string>com.yourname.fonts.custom</string> <key>PayloadType</key>
+    <string>My Custom Font Pack</string>
+    <key>PayloadIdentifier</key>
+    <string>com.yourname.fonts.custom</string>
+    <key>PayloadType</key>
     <string>Configuration</string>
     <key>PayloadUUID</key>
-    <string>UNIQUE_UUID_0</string> <key>PayloadVersion</key>
+    <string>UNIQUE_UUID_0</string>
+    <key>PayloadVersion</key>
     <integer>1</integer>
 </dict>
 </plist>
