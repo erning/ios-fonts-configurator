@@ -1,77 +1,71 @@
 # AGENTS.md
 
-This file provides guidance to AI assistants (Droid, Claude Code, etc.) when working with code in this repository.
+**Generated:** 2026-01-08 | **Commit:** ae38195 | **Branch:** master
 
-## Project Overview
+## Overview
 
-The **iOS Fonts Configurator** is a Rust-based command-line tool that generates `.mobileconfig` files for iOS font installation. It provides a programmatic alternative to Apple's Configurator app, enabling users to create iOS configuration profiles that install custom fonts system-wide.
+Rust CLI tool generating `.mobileconfig` files for iOS font installation. Replaces Apple Configurator for custom font profiles.
 
-## Architecture
+## Structure
 
-### Core Structure
-- **`src/main.rs`**: CLI interface using clap for argument parsing, validates font files, and orchestrates the workflow
-- **`src/mobileconfig.rs`**: Core business logic for `.mobileconfig` file generation, handles Base64 encoding, XML structure generation, and UUID management
+```
+ios-fonts-configurator/
+├── src/
+│   ├── main.rs           # CLI (clap), font collection, orchestration
+│   └── mobileconfig.rs   # MobileConfig/FontPayload structs, XML generation
+├── Cargo.toml            # Dependencies: clap 4.5, base64 0.21, anyhow 1.0
+└── flake.nix             # Nix dev shell (rust-analyzer, clippy, rustfmt)
+```
 
-### Key Components
-- **MobileConfig struct**: Main configuration container with profile metadata and font payloads
-- **FontPayload struct**: Represents individual font files with encoded data and metadata
-- **CLI Arguments**: Output path, display name, identifier, and font files list
+## Where to Look
 
-## Dependencies
+| Task | Location | Notes |
+|------|----------|-------|
+| CLI args | `main.rs:65-109` | clap builder API (not derive) |
+| Font collection | `main.rs:8-62` | Recursive dir scan, depth control |
+| XML generation | `mobileconfig.rs:83-168` | Apple plist format |
+| Add font types | `main.rs:24-27` | Extension matching |
 
-### Core Dependencies
-- `clap 4.5`: Command-line argument parsing with derive features
-- `base64 0.21`: Base64 encoding of font file data
-- `anyhow 1.0`: Comprehensive error handling
+## Code Map
 
-### Build System
-- Uses Cargo with Rust edition 2021
-- Nix development environment available via `flake.nix`
-- Includes rust-analyzer, clippy, and rustfmt in development shell
+| Symbol | Type | Location | Role |
+|--------|------|----------|------|
+| `MobileConfig` | struct | mobileconfig.rs:38 | Profile container |
+| `FontPayload` | struct | mobileconfig.rs:30 | Single font data |
+| `generate_xml` | method | mobileconfig.rs:83 | Plist XML output |
+| `collect_font_files` | fn | main.rs:39 | Entry for font discovery |
+| `generate_uuid` | fn | mobileconfig.rs:9 | Hash-based UUID |
 
-## Key Features
+## Conventions
 
-### Font Support
-- **Supported Formats**: TTF, OTF, WOFF, WOFF2
-- **Recursive Directory Search**: Automatically finds fonts in directories with configurable depth
-- **Mixed Input**: Supports both individual files and directories in the same command
+- **Error handling**: `anyhow::Result` everywhere, no panics
+- **Clap style**: Builder API (`Command`/`Arg`), not derive macros (despite feature enabled)
+- **No tests**: Project has no test modules or tests/ directory
 
-### Generated Output Format
-The tool generates Apple Property List (`.mobileconfig`) XML files with:
-- **Profile Metadata**: Display name, identifier, UUID, and version
-- **Font Payloads**: Base64-encoded font data with individual UUIDs
-- **iOS Compliance**: Proper XML structure for iOS configuration profile installation
+## Anti-Patterns
 
-## Development Environment
+- No forbidden patterns documented in codebase
+- Codebase is clean (no TODO/FIXME/HACK comments)
 
-### Build Commands
+## Commands
+
 ```bash
-# Build the project
-cargo build
+# Dev environment (recommended)
+nix develop
 
-# Run with release optimization
+# Build
 cargo build --release
 
-# Run the CLI tool
-cargo run -- --output profile.mobileconfig --name "My Fonts" --identifier com.example.fonts --fonts font1.ttf font2.otf
+# Run
+cargo run -- -o out.mobileconfig -n "Fonts" -i com.example.fonts -f ~/fonts/
+
+# Check
+cargo clippy && cargo fmt --check
 ```
 
-### CLI Usage
-```bash
-ios-fonts-configurator \
-  --output output.mobileconfig \
-  --name "Custom Font Profile" \
-  --identifier com.company.fonts \
-  --fonts font1.ttf font2.ttf font3.otf
-```
+## Notes
 
-### Advanced Usage
-```bash
-# With directory recursion depth control
-ios-fonts-configurator \
-  --output fonts.mobileconfig \
-  --name "Font Collection" \
-  --identifier com.example.fonts \
-  --fonts /path/to/fonts/ \
-  --max-depth 2
-```
+- **Font formats**: TTF, OTF, WOFF, WOFF2 (see main.rs:24-27)
+- **Max depth**: Default 3 for recursive dir scan
+- **UUID generation**: Uses timestamp hash, not cryptographic (acceptable for profiles)
+- **No CI**: Manual cargo build/clippy workflows

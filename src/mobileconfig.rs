@@ -1,29 +1,19 @@
 use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose, Engine as _};
-use std::collections::hash_map::DefaultHasher;
 use std::fs;
-use std::hash::{Hash, Hasher};
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
 fn generate_uuid() -> String {
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
+    Uuid::new_v4().to_string()
+}
 
-    let mut hasher = DefaultHasher::new();
-    timestamp.hash(&mut hasher);
-    let hash = hasher.finish();
-
-    format!(
-        "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
-        (hash >> 32) as u32,
-        (hash >> 16) as u16,
-        (hash >> 8) as u16,
-        (hash & 0xFF) as u16,
-        hash
-    )
+fn escape_xml(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
 }
 
 #[derive(Debug)]
@@ -93,7 +83,10 @@ impl MobileConfig {
         xml.push_str("  <key>ConsentText</key>\n");
         xml.push_str("  <dict>\n");
         xml.push_str("    <key>default</key>\n");
-        xml.push_str(&format!("    <string>{}</string>\n", self.consent_text));
+        xml.push_str(&format!(
+            "    <string>{}</string>\n",
+            escape_xml(&self.consent_text)
+        ));
         xml.push_str("  </dict>\n");
 
         // PayloadContent
@@ -116,7 +109,10 @@ impl MobileConfig {
 
             xml.push_str("</data>\n");
             xml.push_str("        <key>Name</key>\n");
-            xml.push_str(&format!("        <string>{}</string>\n", font.name));
+            xml.push_str(&format!(
+                "        <string>{}</string>\n",
+                escape_xml(&font.name)
+            ));
             xml.push_str("        <key>PayloadDescription</key>\n");
             xml.push_str("        <string>Configures Font settings</string>\n");
             xml.push_str("        <key>PayloadDisplayName</key>\n");

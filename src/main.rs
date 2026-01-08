@@ -1,9 +1,49 @@
-use clap::{Arg, Command};
+use clap::Parser;
 use mobileconfig::MobileConfig;
 use std::fs;
+use std::io::{self, BufRead};
 use std::path::Path;
 
 mod mobileconfig;
+
+/// Supported font file extensions
+const FONT_EXTENSIONS: &[&str] = &["ttf", "otf", "woff", "woff2"];
+
+/// Generate .mobileconfig files for iOS font installation
+#[derive(Parser)]
+#[command(name = "ifonts", version, about)]
+struct Args {
+    /// Output .mobileconfig file path
+    #[arg(short, long, value_name = "FILE")]
+    output: String,
+
+    /// Display name for the font profile
+    #[arg(short, long, value_name = "NAME")]
+    name: String,
+
+    /// Unique identifier (e.g., com.example.fonts)
+    #[arg(short, long, value_name = "IDENTIFIER")]
+    identifier: String,
+
+    /// Font files or directories containing fonts (use "-" to read from stdin)
+    #[arg(short, long, value_name = "PATHS", num_args = 1..)]
+    fonts: Vec<String>,
+
+    /// Maximum directory recursion depth
+    #[arg(short = 'd', long, value_name = "DEPTH", default_value = "3")]
+    max_depth: u32,
+
+    /// Suppress output messages
+    #[arg(short, long)]
+    quiet: bool,
+}
+
+fn is_font_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| FONT_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
+        .unwrap_or(false)
+}
 
 fn collect_font_files_recursive(
     path: &Path,
@@ -19,15 +59,8 @@ fn collect_font_files_recursive(
         let entry = entry?;
         let entry_path = entry.path();
 
-        if entry_path.is_file() {
-            if let Some(ext) = entry_path.extension().and_then(|s| s.to_str()) {
-                if matches!(
-                    ext.to_lowercase().as_str(),
-                    "ttf" | "otf" | "woff" | "woff2"
-                ) {
-                    font_files.push(entry_path.to_string_lossy().into_owned());
-                }
-            }
+        if entry_path.is_file() && is_font_file(&entry_path) {
+            font_files.push(entry_path.to_string_lossy().into_owned());
         } else if entry_path.is_dir() {
             collect_font_files_recursive(&entry_path, font_files, current_depth + 1, max_depth)?;
         }
@@ -36,7 +69,7 @@ fn collect_font_files_recursive(
     Ok(())
 }
 
-fn collect_font_files(paths: &[&String], max_depth: u32) -> anyhow::Result<Vec<String>> {
+fn collect_font_files(paths: &[String], max_depth: u32) -> anyhow::Result<Vec<String>> {
     let mut font_files = Vec::new();
 
     for path_str in paths {
@@ -48,7 +81,15 @@ fn collect_font_files(paths: &[&String], max_depth: u32) -> anyhow::Result<Vec<S
         if path.is_dir() {
             collect_font_files_recursive(path, &mut font_files, 0, max_depth)?;
         } else if path.is_file() {
-            font_files.push(path.to_string_lossy().into_owned());
+            if is_font_file(path) {
+                font_files.push(path.to_string_lossy().into_owned());
+            } else {
+                return Err(anyhow::anyhow!(
+                    "Not a supported font file ({}): {}",
+                    FONT_EXTENSIONS.join(", "),
+                    path.display()
+                ));
+            }
         }
     }
 
@@ -61,72 +102,44 @@ fn collect_font_files(paths: &[&String], max_depth: u32) -> anyhow::Result<Vec<S
     Ok(font_files)
 }
 
+fn read_paths_from_stdin() -> anyhow::Result<Vec<String>> {
+    let stdin = io::stdin();
+    let paths: Vec<String> = stdin
+        .lock()
+        .lines()
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+
+    if paths.is_empty() {
+        return Err(anyhow::anyhow!("No paths provided from stdin"));
+    }
+
+    Ok(paths)
+}
+
 fn main() -> anyhow::Result<()> {
-    let matches = Command::new("ios-fonts-configurator")
-        .version("0.1.0")
-        .about("Generate .mobileconfig files for iOS font installation")
-        .arg(
-            Arg::new("output")
-                .short('o')
-                .long("output")
-                .value_name("FILE")
-                .help("Output .mobileconfig file path")
-                .required(true),
-        )
-        .arg(
-            Arg::new("name")
-                .short('n')
-                .long("name")
-                .value_name("NAME")
-                .help("Display name for the font profile")
-                .required(true),
-        )
-        .arg(
-            Arg::new("identifier")
-                .short('i')
-                .long("identifier")
-                .value_name("IDENTIFIER")
-                .help("Unique identifier (e.g., com.example.fonts)")
-                .required(true),
-        )
-        .arg(
-            Arg::new("fonts")
-                .short('f')
-                .long("fonts")
-                .value_name("PATHS")
-                .help("Font files or directories containing fonts (space-separated list)")
-                .required(true)
-                .num_args(1..),
-        )
-        .arg(
-            Arg::new("max-depth")
-                .short('d')
-                .long("max-depth")
-                .value_name("DEPTH")
-                .help("Maximum directory recursion depth (default: 3)")
-                .default_value("3"),
-        )
-        .get_matches();
+    let args = Args::parse();
 
-    let output_path = Path::new(matches.get_one::<String>("output").unwrap());
-    let display_name = matches.get_one::<String>("name").unwrap().clone();
-    let identifier = matches.get_one::<String>("identifier").unwrap().clone();
-    let font_paths: Vec<&String> = matches.get_many("fonts").unwrap().collect();
-    let max_depth = matches
-        .get_one::<String>("max-depth")
-        .unwrap()
-        .parse::<u32>()
-        .map_err(|e| anyhow::anyhow!("Invalid max-depth value: {}", e))?;
+    let font_paths = if args.fonts.len() == 1 && args.fonts[0] == "-" {
+        read_paths_from_stdin()?
+    } else {
+        args.fonts
+    };
 
-    println!("Creating mobileconfig file: {}", output_path.display());
-    println!("Profile name: {display_name}");
-    println!("Identifier: {identifier}");
-    println!("Input paths: {font_paths:?}");
+    let output_path = Path::new(&args.output);
 
-    let font_files = collect_font_files(&font_paths, max_depth)?;
-    // println!("Found font files: {:?}", font_files);
+    if !args.quiet {
+        println!("Creating mobileconfig file: {}", output_path.display());
+        println!("Profile name: {}", args.name);
+        println!("Identifier: {}", args.identifier);
+        println!("Input paths: {:?}", font_paths);
+    }
 
-    let mut config = MobileConfig::new(display_name, identifier);
+    let font_files = collect_font_files(&font_paths, args.max_depth)?;
+
+    let mut config = MobileConfig::new(args.name, args.identifier);
 
     for font_file in font_files {
         let font_path = Path::new(&font_file);
@@ -138,14 +151,19 @@ fn main() -> anyhow::Result<()> {
             ));
         }
 
-        println!("Added font: {}", font_path.display());
+        if !args.quiet {
+            println!("Added font: {}", font_path.display());
+        }
     }
 
     config.save_to_file(output_path)?;
-    println!(
-        "Successfully generated .mobileconfig file: {}",
-        output_path.display()
-    );
+
+    if !args.quiet {
+        println!(
+            "Successfully generated .mobileconfig file: {}",
+            output_path.display()
+        );
+    }
 
     Ok(())
 }

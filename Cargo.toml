@@ -1,12 +1,12 @@
 [package]
-name = "ios-fonts-configurator"
-version = "0.1.0"
+name = "ifonts"
+version = "1.0.0"
 edition = "2021"
 authors = ["Erning"]
 description = "A command-line tool to generate .mobileconfig files for iOS font installation"
 
 [dependencies]
-clap = { version = "4.5.43", features = ["derive"] }
-
-base64 = "0.21"
-anyhow = "1.0"
+clap = { version = "4.5.54", features = ["derive"] }
+base64 = "0.22.1"
+anyhow = "1.0.100"
+uuid = { version = "1.11", features = ["v4"] }
