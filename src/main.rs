@@ -122,7 +122,12 @@ fn read_paths_from_stdin() -> anyhow::Result<Vec<String>> {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let font_paths = if args.fonts.len() == 1 && args.fonts[0] == "-" {
+    let font_paths = if args.fonts.iter().any(|p| p == "-") {
+        if args.fonts.len() != 1 {
+            return Err(anyhow::anyhow!(
+                "'-' (stdin) cannot be mixed with other paths in --fonts"
+            ));
+        }
         read_paths_from_stdin()?
     } else {
         args.fonts

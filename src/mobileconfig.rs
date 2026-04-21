@@ -118,7 +118,10 @@ impl MobileConfig {
             xml.push_str("        <key>PayloadDisplayName</key>\n");
             xml.push_str("        <string>Fonts</string>\n");
             xml.push_str("        <key>PayloadIdentifier</key>\n");
-            xml.push_str(&format!("        <string>{}</string>\n", font.identifier));
+            xml.push_str(&format!(
+                "        <string>{}</string>\n",
+                escape_xml(&font.identifier)
+            ));
             xml.push_str("        <key>PayloadType</key>\n");
             xml.push_str("        <string>com.apple.font</string>\n");
             xml.push_str("        <key>PayloadUUID</key>\n");
@@ -134,12 +137,15 @@ impl MobileConfig {
         xml.push_str("  <key>PayloadDisplayName</key>\n");
         xml.push_str(&format!(
             "  <string>{}</string>\n",
-            self.payload_display_name
+            escape_xml(&self.payload_display_name)
         ));
 
         // PayloadIdentifier
         xml.push_str("  <key>PayloadIdentifier</key>\n");
-        xml.push_str(&format!("  <string>{}</string>\n", self.payload_identifier));
+        xml.push_str(&format!(
+            "  <string>{}</string>\n",
+            escape_xml(&self.payload_identifier)
+        ));
 
         // PayloadRemovalDisallowed
         xml.push_str("  <key>PayloadRemovalDisallowed</key>\n");

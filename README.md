@@ -11,7 +11,7 @@ cd ios-fonts-configurator
 cargo build --release
 
 # Use
-./target/release/ios-fonts-configurator \
+./target/release/ifonts \
   --output myfonts.mobileconfig \
   --name "My Fonts" \
   --identifier com.example.myfonts \
@@ -24,17 +24,17 @@ cargo build --release
 
 ```bash
 # Single font
-ios-fonts-configurator \
+ifonts \
     -o single.mobileconfig -n "Single Font" -i com.test.single \
     -f MyFont.ttf
 
 # Directory scan
-ios-fonts-configurator \
+ifonts \
     -o pack.mobileconfig -n "Font Pack" -i com.user.fonts \
     -f ~/Library/Fonts/
 
 # Mixed files and directories
-ios-fonts-configurator \
+ifonts \
     -o mixed.mobileconfig -n "Mixed" -i com.mixed.fonts \
     -f custom.ttf ~/fonts/ /usr/share/fonts/
 ```
